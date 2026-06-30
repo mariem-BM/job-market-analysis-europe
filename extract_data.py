@@ -4,27 +4,28 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 
+# Load environment variables from .env file (API keys)
 load_dotenv()
 APP_ID = os.getenv("ADZUNA_APP_ID")
 APP_KEY = os.getenv("ADZUNA_APP_KEY")
 
-# Liste des pays qu'on veut comparer (codes Adzuna)
-# fr = France, de = Allemagne, gb = UK, nl = Pays-Bas
+# Countries to compare (Adzuna country codes)
+# fr = France, de = Germany, gb = UK, nl = Netherlands
 COUNTRIES = ["fr", "de", "gb", "nl"]
 
-# Liste des métiers qu'on cherche
+# Job titles to search for
 KEYWORDS = ["data analyst", "business analyst", "business intelligence"]
 
-# Nombre de pages à récupérer par recherche (50 résultats/page max chez Adzuna)
+# Number of pages to fetch per search (Adzuna max is 50 results per page)
 PAGES = 3
 
-# Liste vide qui va accumuler toutes les offres trouvées
+# Empty list that will store every job offer we collect
 all_jobs = []
 
 def fetch_jobs(country, keyword, page):
     """
-    Fonction qui appelle l'API Adzuna pour UNE combinaison
-    pays / mot-clé / page, et retourne la liste des offres trouvées.
+    Calls the Adzuna API for ONE combination of country / keyword / page,
+    and returns the list of job offers found.
     """
     url = f"https://api.adzuna.com/v1/api/jobs/{country}/search/{page}"
     params = {
@@ -37,19 +38,20 @@ def fetch_jobs(country, keyword, page):
     response = requests.get(url, params=params)
 
     if response.status_code != 200:
-        print(f"Erreur pour {country}/{keyword}/page{page}: {response.status_code}")
+        print(f"Error for {country}/{keyword}/page{page}: {response.status_code}")
         return []
 
     data = response.json()
     return data.get("results", [])
 
-# Triple boucle : pour chaque pays, pour chaque mot-clé, pour chaque page
+# Triple loop: for each country, for each keyword, for each page
 for country in COUNTRIES:
     for keyword in KEYWORDS:
         for page in range(1, PAGES + 1):
-            print(f"Extraction: {country} | {keyword} | page {page}")
+            print(f"Extracting: {country} | {keyword} | page {page}")
             results = fetch_jobs(country, keyword, page)
 
+            # Stop fetching further pages if this one returned nothing
             if not results:
                 break
 
@@ -68,10 +70,14 @@ for country in COUNTRIES:
                     "url": job.get("redirect_url"),
                 })
 
+            # Pause 1 second between calls to respect API rate limits
             time.sleep(1)
 
+# Convert the list of dictionaries into a structured table (Pandas DataFrame)
 df = pd.DataFrame(all_jobs)
-print(f"\nTotal d'offres extraites: {len(df)}")
 
+print(f"\nTotal job offers extracted: {len(df)}")
+
+# Save the table to a CSV file
 df.to_csv("raw_jobs_data.csv", index=False)
-print("Fichier sauvegardé: raw_jobs_data.csv")
+print("File saved: raw_jobs_data.csv")
