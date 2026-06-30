@@ -15,7 +15,7 @@ df["created"] = pd.to_datetime(df["created"], errors="coerce")
 
 # List of skills we want to detect inside job descriptions
 SKILLS = ["python", "sql", "power bi", "excel", "tableau", "spark",
-          "airflow", "snowflake", "aws", "azure", "r ", "sas"]
+          "airflow", "snowflake", "aws", "azure", "r", "sas"]
 
 # Make sure description is always text, even if some values are missing (NaN)
 df["description"] = df["description"].fillna("").str.lower()
@@ -24,7 +24,9 @@ df["description"] = df["description"].fillna("").str.lower()
 # depending on whether the skill name appears in the description
 for skill in SKILLS:
     column_name = "skill_" + skill.strip().replace(" ", "_")
-    df[column_name] = df["description"].str.contains(skill, na=False)
+    # \b means "word boundary": ensures we match the whole word only
+    pattern = r"\b" + skill + r"\b"
+    df[column_name] = df["description"].str.contains(pattern, regex=True, na=False)
 
 # Save the cleaned dataset
 df.to_csv("clean_jobs_data.csv", index=False)
